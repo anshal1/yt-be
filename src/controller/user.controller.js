@@ -1,6 +1,5 @@
 const CatchErr = require('../../utils/CatchErr');
 const { userModel } = require('../models/index');
-const temp = 100;
 
 const getUser = CatchErr((req, res) => {
   res.status(200).json(req.user);

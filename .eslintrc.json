@@ -5,6 +5,7 @@
     },
     "rules": {
     "no-duplicate-imports": "error",
-    "no-unused-vars": "error"
+    "no-unused-vars": "error",
+    "prefer-const": "error"
     }
    }
