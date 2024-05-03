@@ -8,6 +8,18 @@
     "dev": "nodemon index.js",
     "start": "node index.js"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint — fix",
+      "prettier — write",
+      "git add"
+    ]
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -16,5 +28,10 @@
     "express": "^4.19.2",
     "fluent-ffmpeg": "^2.1.2",
     "mongoose": "^8.3.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.1.1",
+    "husky": "^9.0.11",
+    "prettier": "^3.2.5"
   }
 }
