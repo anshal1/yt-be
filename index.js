@@ -3,6 +3,7 @@ const express = require('express')
 const PORT = process.env.PORT || 5000
 const app = express()
 const allRoutes = require('./src/routes/index')
+require('dotenv').config({ path: './.env' })
 const Connect = require('./src/Connect')
 
 app.use(express.json())
