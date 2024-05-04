@@ -1,6 +1,5 @@
 require('dotenv').config({ path: './.env' })
 const express = require('express')
-// eslint-disable-next-line no-undef
 const PORT = process.env.PORT || 5000
 const app = express()
 const allRoutes = require('./src/routes/index')

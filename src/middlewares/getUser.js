@@ -9,7 +9,6 @@ const getUserById = (showPassword = false) =>
     if (!id) {
       throw new ApiError('Please Login Or Register To Continue', 400)
     }
-    // eslint-disable-next-line no-undef
     const userId = jwt.decode(id, process.env.SECRET)
     if (!userId) {
       throw new ApiError('Unaouthorized Action')
