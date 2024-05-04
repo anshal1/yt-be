@@ -8,4 +8,6 @@ router
   .get(getUserById(), userControlles.getUser)
   .post(userControlles.CreateUser)
 
+router.route('/login').post(userControlles.Login)
+
 module.exports = router
