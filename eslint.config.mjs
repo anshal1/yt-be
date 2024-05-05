@@ -9,6 +9,7 @@ export default [
       globals: {
         node: true,
         process: true,
+        __dirname: true,
       },
     },
   },
