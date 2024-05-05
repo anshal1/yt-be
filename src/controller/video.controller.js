@@ -51,6 +51,27 @@ const uploadVideo = CatchErr(async (req, res) => {
   res.status(201).json({ message: 'Video Upoaded Successfully', video })
 })
 
+const getAllVideos = CatchErr(async (req, res) => {
+  const { page = 1, limit = 15 } = req.query
+  const videos = await videoModel
+    .find({})
+    .limit(+limit)
+    .skip(+limit * (+page - 1))
+    .populate('user')
+  res.status(200).json({ videos })
+})
+
+const getVideoBySlug = CatchErr(async (req, res) => {
+  const { slug } = req.params
+  const video = await videoModel.findOne({ slug }).populate('user')
+  if (!video) {
+    throw new ApiError('Video Not Found', 404)
+  }
+  res.status(200).json({ video })
+})
+
 module.exports = {
   uploadVideo,
+  getAllVideos,
+  getVideoBySlug,
 }

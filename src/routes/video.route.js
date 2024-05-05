@@ -18,5 +18,8 @@ const upload = multer({ storage })
 router
   .route('/')
   .post(getUserById(), upload.single('video'), videoControlles.uploadVideo)
+  .get(videoControlles.getAllVideos)
+
+router.route('/:slug').get(videoControlles.getVideoBySlug)
 
 module.exports = router
