@@ -20,6 +20,9 @@ router
   .post(getUserById(), upload.single('video'), videoControlles.uploadVideo)
   .get(videoControlles.getAllVideos)
 
-router.route('/:slug').get(videoControlles.getVideoBySlug)
+router
+  .route('/:slug')
+  .get(videoControlles.getVideoBySlug)
+  .put(videoControlles.updateViews)
 
 module.exports = router

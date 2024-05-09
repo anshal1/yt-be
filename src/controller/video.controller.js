@@ -70,8 +70,24 @@ const getVideoBySlug = CatchErr(async (req, res) => {
   res.status(200).json({ video })
 })
 
+const updateViews = CatchErr(async (req, res) => {
+  const { slug } = req.params
+  const videoExists = await videoModel.findById(slug)
+  if (!videoExists) {
+    throw new ApiError('Video Not Found', 404)
+  }
+  const views = videoExists?.views
+  const updatedVideo = await videoModel.findByIdAndUpdate(
+    slug,
+    { $set: { views: views + 1 } },
+    { new: true },
+  )
+  res.status(200).json(updatedVideo)
+})
+
 module.exports = {
   uploadVideo,
   getAllVideos,
   getVideoBySlug,
+  updateViews,
 }
