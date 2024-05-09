@@ -5,6 +5,13 @@ const app = express()
 const allRoutes = require('./src/routes/index')
 const Connect = require('./src/Connect')
 const path = require('path')
+const cors = require('cors')
+
+app.use(
+  cors({
+    origin: '*',
+  }),
+)
 
 app.use(express.json())
 
