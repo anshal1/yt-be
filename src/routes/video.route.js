@@ -24,5 +24,6 @@ router
   .route('/:slug')
   .get(videoControlles.getVideoBySlug)
   .put(videoControlles.updateViews)
+  .delete(getUserById(), videoControlles.deleteVideo)
 
 module.exports = router

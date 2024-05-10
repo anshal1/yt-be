@@ -5,6 +5,7 @@ const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path
 const ffmpeg = require('fluent-ffmpeg')
 ffmpeg.setFfmpegPath(ffmpegPath)
 const path = require('path')
+const fs = require('fs')
 
 const resolutions = [
   { resolution: '640x360', bitrate: '800k' }, // low resolution
@@ -85,9 +86,35 @@ const updateViews = CatchErr(async (req, res) => {
   res.status(200).json(updatedVideo)
 })
 
+const deleteVideo = CatchErr(async (req, res) => {
+  const user = req.user
+  const { slug } = req.params
+  const videoExists = await videoModel.findById(slug)
+  if (!videoExists) {
+    throw new ApiError('Video Not Found', 404)
+  }
+  const correctUser = user?._id?.toString() === videoExists?.user?.toString()
+  if (!correctUser) {
+    throw new ApiError('Unauthorzed Action', 401)
+  }
+  const values = videoExists?.video?.values()
+  for (let file of values) {
+    const filename = file?.replace(`${process.env.URL}/`, '')
+    const fileExist = fs.existsSync(
+      path.join(__dirname, '../videos/', filename),
+    )
+    if (fileExist) {
+      fs.unlinkSync(path.join(__dirname, '../videos/', filename))
+    }
+  }
+  const deleteDocument = await videoModel.findByIdAndDelete(slug)
+  res.status(200).json(deleteDocument)
+})
+
 module.exports = {
   uploadVideo,
   getAllVideos,
   getVideoBySlug,
   updateViews,
+  deleteVideo,
 }
