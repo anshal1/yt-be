@@ -6,6 +6,13 @@ const ffmpeg = require('fluent-ffmpeg')
 ffmpeg.setFfmpegPath(ffmpegPath)
 const path = require('path')
 const fs = require('fs')
+const { Dropbox } = require('dropbox')
+const TOKEN = process.env.DBX
+
+const dbx = new Dropbox({
+  accessToken: TOKEN,
+  accessTokenExpiresAt: new Date('2050-01-01'),
+})
 
 const resolutions = [
   { resolution: '640x360', bitrate: '800k' }, // low resolution
@@ -19,23 +26,51 @@ const uploadVideo = CatchErr(async (req, res) => {
   if (!req.file) {
     throw new ApiError('Please Provide A Video', 400)
   }
+  // storing all the video paths with corresponding resolution
   const allVideoUrls = new Map()
+  const hostedUrls = new Map()
+  // looping over all resolution and encoding the videos
   resolutions.forEach(({ resolution, bitrate }) => {
-    const outputFilePath = path.join(
-      __dirname,
-      `../videos/`,
-      `${req?.file?.filename}_${resolution}_${user?._id}.mp4`,
-    )
-    allVideoUrls.set(
-      resolution,
-      `${process.env.URL}/${req?.file?.filename}_${resolution}_${user?._id}.mp4`,
-    )
+    const name = `${req?.file?.filename}${resolution}${user?._id}.mp4`
+    // output path of the encoded video
+    const outputFilePath = path.join(__dirname, `../videos/`, name)
+    allVideoUrls.set(resolution, `${process.env.URL}/${name}`)
 
     ffmpeg(req?.file?.path)
       .outputOptions(['-vf', `scale=${resolution}`, '-b:v', bitrate])
       .output(outputFilePath)
-      .on('end', () => {
+      .on('end', async () => {
         console.log(`Transcoding of ${resolution} finished`)
+        // on completion of encoding uploading the video to dropbox
+        try {
+          const fileContent = fs.readFileSync(outputFilePath)
+          console.log('Started Uploading')
+          const response = await dbx.filesUpload({
+            path: `/Apps/Ap-YT/${name}`,
+            contents: fileContent,
+          })
+          const sharedLinkResponse =
+            await dbx.sharingCreateSharedLinkWithSettings({
+              path: `/Apps/Ap-YT/${name}`,
+            })
+          const sharedLink = sharedLinkResponse.result.url.replace(
+            'dl=0',
+            'raw=1',
+          )
+          hostedUrls.set(resolution, sharedLink)
+          // updating the document
+          const query = {
+            [`video.${resolution}`]: `${process.env.URL}/${response.result.name}`,
+          }
+          await videoModel.findOneAndUpdate(query, {
+            $set: { dropboxData: response.result, sharedUrl: hostedUrls },
+          })
+          fs.unlinkSync(path.join(__dirname, `../videos/`, name))
+          console.log(`Video: ${resolution} Uploaded`)
+        } catch (error) {
+          console.log(error)
+          throw new ApiError(error?.message, 500)
+        }
       })
       .on('error', (err) => {
         throw new ApiError(err?.message, 500)

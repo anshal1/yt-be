@@ -20,6 +20,12 @@ const Video = new Schema(
     title: {
       type: String,
     },
+    dropboxData: {
+      type: Object,
+    },
+    sharedUrl: {
+      type: Map,
+    },
   },
   {
     timestamps: true,
