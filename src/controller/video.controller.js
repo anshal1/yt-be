@@ -132,15 +132,13 @@ const deleteVideo = CatchErr(async (req, res) => {
   if (!correctUser) {
     throw new ApiError('Unauthorzed Action', 401)
   }
-  const values = videoExists?.video?.values()
-  for (let file of values) {
-    const filename = file?.replace(`${process.env.URL}/`, '')
-    const fileExist = fs.existsSync(
-      path.join(__dirname, '../videos/', filename),
-    )
-    if (fileExist) {
-      fs.unlinkSync(path.join(__dirname, '../videos/', filename))
-    }
+  const values = videoExists?.sharedUrl?.values()
+  for (let link of values) {
+    const response = await dbx.sharingGetSharedLinkMetadata({
+      url: link,
+    })
+    const deletePath = response.result.path_lower
+    await dbx.filesDeleteV2({ path: deletePath })
   }
   const deleteDocument = await videoModel.findByIdAndDelete(slug)
   res.status(200).json(deleteDocument)
