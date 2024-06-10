@@ -21,6 +21,10 @@ const resolutions = [
 ]
 
 const uploadVideo = CatchErr(async (req, res) => {
+  const videoDirExists = fs.existsSync(path.join(__dirname, '../videos'))
+  if (!videoDirExists) {
+    fs.mkdirSync(path.join(__dirname, '../videos'))
+  }
   const user = req.user
   const { title } = req.body
   if (!req.file) {
@@ -41,35 +45,38 @@ const uploadVideo = CatchErr(async (req, res) => {
       .output(outputFilePath)
       .on('end', async () => {
         console.log(`Transcoding of ${resolution} finished`)
-        // on completion of encoding uploading the video to dropbox
-        try {
-          const fileContent = fs.readFileSync(outputFilePath)
-          console.log('Started Uploading')
-          const response = await dbx.filesUpload({
-            path: `/Apps/Ap-YT/${name}`,
-            contents: fileContent,
-          })
-          const sharedLinkResponse =
-            await dbx.sharingCreateSharedLinkWithSettings({
+        if (process.env.UPLOAD === 'True') {
+          console.log('Test')
+          // on completion of encoding uploading the video to dropbox
+          try {
+            const fileContent = fs.readFileSync(outputFilePath)
+            console.log('Started Uploading')
+            const response = await dbx.filesUpload({
               path: `/Apps/Ap-YT/${name}`,
+              contents: fileContent,
             })
-          const sharedLink = sharedLinkResponse.result.url.replace(
-            'dl=0',
-            'raw=1',
-          )
-          hostedUrls.set(resolution, sharedLink)
-          // updating the document
-          const query = {
-            [`video.${resolution}`]: `${process.env.URL}/${response.result.name}`,
+            const sharedLinkResponse =
+              await dbx.sharingCreateSharedLinkWithSettings({
+                path: `/Apps/Ap-YT/${name}`,
+              })
+            const sharedLink = sharedLinkResponse.result.url.replace(
+              'dl=0',
+              'raw=1',
+            )
+            hostedUrls.set(resolution, sharedLink)
+            // updating the document
+            const query = {
+              [`video.${resolution}`]: `${process.env.URL}/${response.result.name}`,
+            }
+            await videoModel.findOneAndUpdate(query, {
+              $set: { dropboxData: response.result, sharedUrl: hostedUrls },
+            })
+            fs.unlinkSync(path.join(__dirname, `../videos/`, name))
+            console.log(`Video: ${resolution} Uploaded`)
+          } catch (error) {
+            console.log(error)
+            throw new ApiError(error?.message, 500)
           }
-          await videoModel.findOneAndUpdate(query, {
-            $set: { dropboxData: response.result, sharedUrl: hostedUrls },
-          })
-          fs.unlinkSync(path.join(__dirname, `../videos/`, name))
-          console.log(`Video: ${resolution} Uploaded`)
-        } catch (error) {
-          console.log(error)
-          throw new ApiError(error?.message, 500)
         }
       })
       .on('error', (err) => {
@@ -132,13 +139,21 @@ const deleteVideo = CatchErr(async (req, res) => {
   if (!correctUser) {
     throw new ApiError('Unauthorzed Action', 401)
   }
-  const values = videoExists?.sharedUrl?.values()
-  for (let link of values) {
-    const response = await dbx.sharingGetSharedLinkMetadata({
-      url: link,
-    })
-    const deletePath = response.result.path_lower
-    await dbx.filesDeleteV2({ path: deletePath })
+  if (videoExists?.sharedUrl) {
+    const values = videoExists?.sharedUrl?.values()
+    for (let link of values) {
+      const response = await dbx.sharingGetSharedLinkMetadata({
+        url: link,
+      })
+      const deletePath = response.result.path_lower
+      await dbx.filesDeleteV2({ path: deletePath })
+    }
+  } else {
+    const values = videoExists?.video?.values()
+    for (let link of values) {
+      const deletepath = link.replace(`${process.env.URL}/`, '')
+      fs.unlinkSync(path.join(__dirname, '../videos/', deletepath))
+    }
   }
   const deleteDocument = await videoModel.findByIdAndDelete(slug)
   res.status(200).json(deleteDocument)
